@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Bus, Ship, Settings, Clock, Check, Calendar, Sun, Briefcase, ChevronRight, Star } from 'lucide-react';
+import { Bus, Ship, Settings, Clock, Check, Calendar, Sun, Briefcase, ChevronRight, Star, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import { routes } from './data';
 import { 
   getDayType,
@@ -13,7 +13,7 @@ import { Route, TransportType, Direction, CountdownState, Language, ScheduleOver
 // --- Translation Map ---
 const translations = {
   en: {
-    nextArrival: 'Next Arrival',
+    nextArrival: 'Time Remaining',
     laterDepartures: 'Later departures',
     onSchedule: 'Estimated',
     bus: 'Bus',
@@ -21,7 +21,7 @@ const translations = {
     settings: 'Settings',
     noMoreService: 'No more service',
     serviceEnded: 'Service has ended for today.',
-    scheduledAt: 'Scheduled at',
+    scheduledAt: 'Departure time',
     language: 'Language',
     close: 'Close',
     min: 'MIN',
@@ -43,6 +43,16 @@ const translations = {
     switchBusToTWWest: 'Bus (To TW West)',
     viaHZMB: 'via HZMB',
     normal: 'Normal',
+    lastDeparture: 'Last Departure',
+    show48h: 'Show 48h',
+    show12h: "Show today's remaining departures",
+    show24h: 'Show 24h',
+    showFullDay: 'Show Full Day',
+    kwaiFongOvernight: 'Kwai Fong Overnight Departures',
+    viaKwaiFong: 'Via Kwai Fong',
+    viaTsingYi: 'Via Tsing Yi',
+    overnightWanChai: 'Overnight Departures (via Wan Chai)',
+    overnightGeneric: 'Overnight Departures',
   },
   zh: {
     nextArrival: '開出時間剩餘',
@@ -75,8 +85,30 @@ const translations = {
     switchBusToTWWest: '巴士 (往荃灣西)',
     viaHZMB: '經港珠澳',
     normal: '不經港珠澳',
+    lastDeparture: '尾班',
+    show48h: '顯示48小時',
+    show12h: '顯示今日餘下班次',
+    show24h: '顯示24小時',
+    showFullDay: '顯示全日班次',
+    kwaiFongOvernight: '葵芳通宵班次',
+    viaKwaiFong: '經葵芳',
+    viaTsingYi: '經青衣',
+    overnightWanChai: '通宵班次（經灣仔）',
+    overnightGeneric: '通宵班次',
   }
 };
+
+interface Badge {
+  text: string;
+  className: string;
+}
+
+interface ScheduleItem {
+  time: string;
+  timestamp: number;
+  badges: Badge[];
+  dateLabel?: string;
+}
 
 // --- Components ---
 
@@ -250,9 +282,8 @@ const HeroCountdown: React.FC<{
   departureTime: string;
   isAvailable: boolean;
   lang: Language;
-  routeId: string;
-  directionIndex: number;
-}> = ({ minutes, seconds, departureTime, isAvailable, lang, routeId, directionIndex }) => {
+  badges: Badge[];
+}> = ({ minutes, seconds, departureTime, isAvailable, lang, badges }) => {
   const t = translations[lang];
   const getColorClass = () => {
     if (!isAvailable) return 'text-slate-300';
@@ -269,41 +300,6 @@ const HeroCountdown: React.FC<{
 
   const formattedSeconds = seconds.toString().padStart(2, '0');
 
-  // Badge Logic for NR334 (Airport)
-  let statusBadge = null;
-  if (routeId === 'NR334' && isAvailable && departureTime !== '--:--') {
-    const minute = departureTime.split(':')[1];
-    const isToAirport = directionIndex === 0;
-    
-    // Logic:
-    // To Airport: :00 -> HZMB (Orange), :30 -> Normal (Gray)
-    // To PI:      :30 -> HZMB (Orange), :00 -> Normal (Gray)
-    let isHzmb = false;
-    let isNormal = false;
-
-    if (isToAirport) {
-        if (minute === '00') isHzmb = true;
-        else if (minute === '30') isNormal = true;
-    } else {
-        if (minute === '30') isHzmb = true;
-        else if (minute === '00') isNormal = true;
-    }
-
-    if (isHzmb) {
-        statusBadge = (
-            <div className="mr-2 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-orange-100 text-orange-600 border border-orange-200">
-                {t.viaHZMB}
-            </div>
-        );
-    } else if (isNormal) {
-        statusBadge = (
-            <div className="mr-2 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 border border-slate-200">
-                {t.normal}
-            </div>
-        );
-    }
-  }
-
   return (
     <div className={`mx-4 mt-6 rounded-[32px] p-8 shadow-2xl shadow-indigo-100/50 border transition-colors duration-500 relative overflow-hidden ${getBgClass()}`}>
       <div className="absolute top-0 right-0 p-4 opacity-[0.03] pointer-events-none">
@@ -313,8 +309,12 @@ const HeroCountdown: React.FC<{
       <div className="relative">
         <div className="flex items-center justify-between mb-4">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{t.nextArrival}</span>
-          <div className="flex items-center">
-             {statusBadge}
+          <div className="flex items-center gap-2">
+             {badges.map((badge, idx) => (
+               <div key={idx} className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${badge.className}`}>
+                 {badge.text}
+               </div>
+             ))}
              <div className="px-4 py-1.5 bg-indigo-50 text-indigo-700 rounded-full font-black text-xs border border-indigo-100/50">
                 {departureTime}
              </div>
@@ -364,22 +364,46 @@ interface CrossRouteButtonProps {
 }
 
 const UpcomingSchedule: React.FC<{ 
-  times: string[]; 
+  items: ScheduleItem[]; 
   lang: Language; 
   isFullList: boolean;
   crossRoute?: CrossRouteButtonProps | null;
   routeId: string;
   directionIndex: number;
-}> = ({ times, lang, isFullList, crossRoute, routeId, directionIndex }) => {
+  canExtend: boolean;
+  isExtendedView: boolean;
+  onToggleView: () => void;
+  collapseLabel: string;
+  expandLabel: string;
+}> = ({ items, lang, isFullList, crossRoute, routeId, directionIndex, canExtend, isExtendedView, onToggleView, collapseLabel, expandLabel }) => {
   const t = translations[lang];
-  if (times.length === 0) return null;
+  if (items.length === 0) return null;
   
   return (
     <div className="mx-4 mt-10 mb-32">
       <div className="flex items-center justify-between mb-5 px-4">
-        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-          {isFullList ? t.fullSchedule : t.laterDepartures}
-        </h3>
+        <div className="flex items-center gap-3">
+          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+            {isFullList ? t.fullSchedule : t.laterDepartures}
+          </h3>
+          {canExtend && (
+            <button 
+              onClick={onToggleView}
+              className="px-2 py-1 rounded-md bg-slate-100 text-[10px] font-bold text-slate-500 hover:bg-slate-200 transition-colors flex items-center gap-1"
+            >
+              {isExtendedView ? (
+                 <>
+                   <ArrowUpCircle size={10} /> {collapseLabel}
+                 </>
+              ) : (
+                 <>
+                   <ArrowDownCircle size={10} /> {expandLabel}
+                 </>
+              )}
+            </button>
+          )}
+        </div>
+        
         {crossRoute && (
           <button 
             onClick={crossRoute.onAction}
@@ -392,52 +416,36 @@ const UpcomingSchedule: React.FC<{
         )}
       </div>
       <div className="bg-white rounded-[32px] overflow-hidden shadow-xl shadow-slate-200/50 border border-slate-100">
-        {times.map((time, idx) => {
-          let label = t.onSchedule;
-          let labelClass = "text-slate-500 bg-slate-100";
-
-          if (routeId === 'NR334') {
-             const minute = time.split(':')[1];
-             const isToAirport = directionIndex === 0;
-             // To Airport: 00 -> HZMB, 30 -> Normal
-             // To PI: 30 -> HZMB, 00 -> Normal
-             
-             if (isToAirport) {
-                if (minute === '00') {
-                    label = t.viaHZMB;
-                    labelClass = "text-orange-600 bg-orange-100";
-                } else if (minute === '30') {
-                    label = t.normal;
-                    labelClass = "text-slate-500 bg-slate-100";
-                }
-             } else {
-                if (minute === '30') {
-                    label = t.viaHZMB;
-                    labelClass = "text-orange-600 bg-orange-100";
-                } else if (minute === '00') {
-                    label = t.normal;
-                    labelClass = "text-slate-500 bg-slate-100";
-                }
-             }
-          }
+        {items.map((item, idx) => {
+          const showDateHeader = idx === 0 || item.dateLabel !== items[idx - 1].dateLabel;
 
           return (
-            <div 
-              key={idx} 
-              className={`flex items-center justify-between p-6 active:bg-slate-50 transition-colors ${
-                idx !== times.length - 1 ? 'border-b border-slate-50' : ''
-              }`}
-            >
-              <div className="flex items-center">
-                <div className="w-11 h-11 bg-slate-50 rounded-2xl flex items-center justify-center mr-5 text-indigo-600 shadow-sm">
-                  <Clock size={20} strokeWidth={2.5} />
+            <React.Fragment key={`${item.timestamp}-${idx}`}>
+              {isExtendedView && showDateHeader && item.dateLabel && (
+                <div className="px-6 py-2 bg-slate-50 border-y border-slate-100 text-xs font-bold text-slate-500 sticky top-0">
+                  {item.dateLabel}
                 </div>
-                <span className="mono text-2xl font-black text-slate-800 tracking-tighter tabular-nums">{time}</span>
+              )}
+              <div 
+                className={`flex items-center justify-between p-6 active:bg-slate-50 transition-colors ${
+                  idx !== items.length - 1 ? 'border-b border-slate-50' : ''
+                }`}
+              >
+                <div className="flex items-center">
+                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center mr-5 shadow-sm bg-slate-50 text-indigo-600`}>
+                    <Clock size={20} strokeWidth={2.5} />
+                  </div>
+                  <span className={`mono text-2xl font-black tracking-tighter tabular-nums text-slate-800`}>{item.time}</span>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                    {item.badges.map((badge, bIdx) => (
+                        <span key={bIdx} className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${badge.className}`}>
+                            {badge.text}
+                        </span>
+                    ))}
+                </div>
               </div>
-              <div className="flex flex-col items-end">
-                  <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${labelClass}`}>{label}</span>
-              </div>
-            </div>
+            </React.Fragment>
           );
         })}
       </div>
@@ -577,6 +585,9 @@ export default function App() {
   const [selectedRoute, setSelectedRoute] = useState<Route>(routes.find(r => r.type === TransportType.BUS) || routes[0]);
   const [directionIndex, setDirectionIndex] = useState(0);
   const [now, setNow] = useState(new Date());
+  
+  // New state for extended view toggle
+  const [isExtendedView, setIsExtendedView] = useState(false);
 
   // Load favorites from local storage
   const [favorites, setFavorites] = useState<string[]>(() => {
@@ -630,12 +641,14 @@ export default function App() {
     if (sorted.length > 0) {
       setSelectedRoute(sorted[0]);
       setDirectionIndex(0);
+      setIsExtendedView(false); // Reset view mode
     }
   };
 
   const handleSelectRoute = (route: Route) => {
     setSelectedRoute(route);
     setDirectionIndex(0);
+    setIsExtendedView(false); // Reset view mode on route change
   };
 
   const handleSwitchRoute = (routeId: string, dirIndex: number = 0) => {
@@ -644,6 +657,7 @@ export default function App() {
         setActiveType(target.type);
         setSelectedRoute(target);
         setDirectionIndex(dirIndex);
+        setIsExtendedView(false);
     }
   };
 
@@ -663,144 +677,297 @@ export default function App() {
   const detectedDayType = useMemo(() => getDayType(now), [now]);
   const effectiveDayType = scheduleOverride === 'auto' ? detectedDayType : (scheduleOverride as DayType);
 
-  const { currentCountdown, nextDepartures, showFullSchedule } = useMemo(() => {
+  // Group definitions for view behavior
+  // Group A: Limit 10 (Today) vs Full Day (Today)
+  const GROUP_A = ['NR331', 'NR331S', 'NR334', 'Ferry-Central']; 
+  // Group B: 24h vs 48h
+  const GROUP_B = ['NR330', 'NR332', 'NR338'];
+  
+  const EXTENDED_VIEW_ROUTES = [...GROUP_A, ...GROUP_B];
+  const canExtend = EXTENDED_VIEW_ROUTES.includes(selectedRoute.id);
+
+  const { currentCountdown, nextDepartures, showFullSchedule, collapseLabel, expandLabel } = useMemo(() => {
+    const t = translations[lang];
     const direction = selectedRoute.directions[directionIndex];
     
-    // Logic: NR330 (Tsing Yi), NR332 (Kwai Fong), NR338 (Central) operate 24h or effectively so.
-    // They should always show upcoming departures, handling day transitions seamlessly.
-    const isContinuousService = ['NR330', 'NR332', 'NR338'].includes(selectedRoute.id);
-    
-    // Adjust day logic for 24h service
-    // If it's early morning (e.g. 05:00), we want to treat it as "yesterday" service day
-    // This allows seamless transition for 24h routes.
+    // Global Service Day Adjustment for 00:00-06:00
+    // Treat 00:00-05:59 as part of the previous day for scheduling
     let currentServiceDayType = effectiveDayType;
     let shouldUseAdjustedDate = false;
     
-    if (isContinuousService && scheduleOverride === 'auto') {
+    if (scheduleOverride === 'auto') {
         const adjustedDate = new Date(now);
         if (adjustedDate.getHours() < 6) {
             adjustedDate.setDate(adjustedDate.getDate() - 1);
         }
         currentServiceDayType = getDayType(adjustedDate);
-        shouldUseAdjustedDate = true;
+        shouldUseAdjustedDate = adjustedDate.getDate() !== now.getDate();
     }
 
     const departures = direction.departures[currentServiceDayType] || [];
-    
     const currentTimeSeconds = getSecondsSinceStartOfDay(now);
-    const nextTime = departures.find(t => parseTimeToSeconds(t) > currentTimeSeconds);
+    const nextTime = departures.find(tStr => parseTimeToSeconds(tStr) > currentTimeSeconds);
     
-    let countdown: CountdownState = {
-      minutes: 0,
-      seconds: 0,
-      departureTime: '--:--',
-      isAvailable: false
+    // Helper to get day type for an offset day (0 = today/current service day, 1 = next day, etc)
+    const getServiceDayDepartures = (dayOffset: number) => {
+         if (scheduleOverride === 'auto') {
+             const baseDate = shouldUseAdjustedDate ? (() => {
+                 const d = new Date(now);
+                 if (d.getHours() < 6) d.setDate(d.getDate() - 1);
+                 return d;
+             })() : new Date(now);
+             
+             const targetDate = new Date(baseDate);
+             targetDate.setDate(targetDate.getDate() + dayOffset);
+             const type = getDayType(targetDate);
+             
+             // Date Label Formatting
+             const formatter = new Intl.DateTimeFormat(lang === 'zh' ? 'zh-HK' : 'en-GB', {
+                 weekday: 'short', month: 'numeric', day: 'numeric'
+             });
+             const dateLabel = formatter.format(targetDate);
+
+             return { times: direction.departures[type] || [], dateLabel };
+        }
+        // Manual override: just repeat the same schedule
+        return { times: departures, dateLabel: `Day +${dayOffset}` }; 
     };
 
-    let upcoming: string[] = [];
-    let isFullList = false;
-
+    // Countdown Calculation
+    let countdown: CountdownState = { minutes: 0, seconds: 0, departureTime: '--:--', isAvailable: false };
+    let countdownTimestamp = -1;
+    
     if (nextTime) {
-      const nextSeconds = parseTimeToSeconds(nextTime);
-      const diff = nextSeconds - currentTimeSeconds;
-      countdown = {
-        minutes: Math.floor(diff / 60),
-        seconds: diff % 60,
-        departureTime: nextTime,
-        isAvailable: true
-      };
-
-      const isServiceGapLarge = (nextSeconds - currentTimeSeconds) > 3600;
-      // Show full schedule if Ferry OR (Bus AND GapLarge AND Not Continuous)
-      // Continuous routes specifically request to show 'later departures' (not full) even if gap is large,
-      // UNLESS service has ended (handled in else block).
-      const shouldShowFull = selectedRoute.type === TransportType.FERRY || 
-                             (selectedRoute.type === TransportType.BUS && isServiceGapLarge && !isContinuousService);
-
-      if (shouldShowFull) {
-          upcoming = departures;
-          isFullList = true;
-      } else {
-          const needed = 6;
-          let nextList = findNextDepartures(departures, currentTimeSeconds, needed);
-          
-          // Continuous Service Logic: Fetch from next day if needed to ensure 5 departures are shown
-          if (isContinuousService && nextList.length < needed) {
-              let nextDayDepartures = [];
-              if (scheduleOverride === 'auto') {
-                  const baseDate = shouldUseAdjustedDate ? (() => {
-                      const d = new Date(now);
-                      if (d.getHours() < 6) d.setDate(d.getDate() - 1);
-                      return d;
-                  })() : new Date(now);
-                  
-                  const nextServiceDate = new Date(baseDate);
-                  nextServiceDate.setDate(nextServiceDate.getDate() + 1);
-                  const nextDayType = getDayType(nextServiceDate);
-                  nextDayDepartures = direction.departures[nextDayType] || [];
-              } else {
-                  nextDayDepartures = departures;
-              }
-              const countToFetch = needed - nextList.length;
-              nextList = [...nextList, ...nextDayDepartures.slice(0, countToFetch)];
-          }
-
-          upcoming = nextList.slice(1);
-          isFullList = false;
-      }
-    } else {
-      // Service ended for today -> Find next day's first departure
-      let nextDayDepartures = departures;
-      
-      if (scheduleOverride === 'auto') {
-         // Determine "Next Day" based on the current effective service day
-         const baseDate = shouldUseAdjustedDate ? (() => {
-              const d = new Date(now);
-              if (d.getHours() < 6) d.setDate(d.getDate() - 1);
-              return d;
-         })() : new Date(now);
-
-         const nextServiceDate = new Date(baseDate);
-         nextServiceDate.setDate(nextServiceDate.getDate() + 1);
-         const nextDayType = getDayType(nextServiceDate);
-         nextDayDepartures = direction.departures[nextDayType] || [];
-      } else {
-         // Loop back to start of current schedule type
-         nextDayDepartures = departures;
-      }
-
-      if (nextDayDepartures.length > 0) {
-        const firstNextDay = nextDayDepartures[0];
-        const firstNextSeconds = parseTimeToSeconds(firstNextDay);
-        // Calculate diff: (24h + time in next day) - current service time
-        // This formula works even if currentTimeSeconds > 24h (e.g. 29h).
-        // e.g. 29h now, next bus 6h. Diff = (24+6) - 29 = 1h.
-        const diff = (24 * 3600 + firstNextSeconds) - currentTimeSeconds;
-        
+        const nextSeconds = parseTimeToSeconds(nextTime);
+        const diff = nextSeconds - currentTimeSeconds;
         countdown = {
             minutes: Math.floor(diff / 60),
             seconds: diff % 60,
-            departureTime: firstNextDay,
+            departureTime: nextTime,
             isAvailable: true
         };
-        
-        // Show next 5 departures for Continuous Routes instead of full list for next day
-        if (isContinuousService) {
-             upcoming = nextDayDepartures.slice(1, 6);
-             isFullList = false;
-        } else {
-             upcoming = nextDayDepartures;
-             isFullList = true;
+        countdownTimestamp = nextSeconds;
+    } else {
+        const nextDayData = getServiceDayDepartures(1);
+        const nextDayDeps = nextDayData.times;
+        if (nextDayDeps.length > 0) {
+            const firstNextDay = nextDayDeps[0];
+            const firstNextSeconds = parseTimeToSeconds(firstNextDay);
+            // Time until next day's first departure (24h offset + time)
+            const diff = (24 * 3600 + firstNextSeconds) - currentTimeSeconds;
+            countdown = {
+                minutes: Math.floor(diff / 60),
+                seconds: diff % 60,
+                departureTime: firstNextDay,
+                isAvailable: true
+            };
+            countdownTimestamp = 24 * 3600 + firstNextSeconds;
         }
-      }
+    }
+
+    // Determine the threshold for showing upcoming departures
+    // Ensure we filter out the departure currently being counted down
+    const filterThreshold = countdown.isAvailable ? countdownTimestamp : currentTimeSeconds;
+
+    // Helper to create badges
+    const getBadges = (timeStr: string, isLastItem: boolean) => {
+        const badges: Badge[] = [];
+        let specialBadge: Badge | null = null;
+        let isLast = isLastItem;
+        
+        // NR330 (Tsing Yi) Logic
+        if (selectedRoute.id === 'NR330') {
+           const isToTsingYi = directionIndex === 0;
+           const isToPI = directionIndex === 1;
+           const overnightDeparturesToTY = ['01:00', '01:45', '02:30', '03:15', '04:00', '04:45', '05:30'];
+           const overnightDeparturesToPI = ['01:15', '02:00', '02:45', '03:30', '04:15', '05:00', '05:45'];
+
+           if (isToTsingYi && overnightDeparturesToTY.includes(timeStr)) {
+               specialBadge = { text: t.kwaiFongOvernight, className: "text-purple-600 bg-purple-100 border border-purple-200" };
+           } else if (isToPI && overnightDeparturesToPI.includes(timeStr)) {
+               specialBadge = { text: t.viaKwaiFong, className: "text-purple-600 bg-purple-100 border border-purple-200" };
+           }
+        }
+
+        // NR332 (Kwai Fong) Logic
+        if (selectedRoute.id === 'NR332') {
+            const isToKwaiFong = directionIndex === 0;
+            const overnightDeparturesToKF = ['01:00', '01:45', '02:30', '03:15', '04:00', '04:45', '05:30'];
+            
+            if (isToKwaiFong && overnightDeparturesToKF.includes(timeStr)) {
+                specialBadge = { text: t.viaTsingYi, className: "text-purple-600 bg-purple-100 border border-purple-200" };
+            }
+        }
+
+        // NR338 (Central) Logic
+        if (selectedRoute.id === 'NR338') {
+            const isToCentral = directionIndex === 0;
+            const isToPI = directionIndex === 1;
+
+            // Override Last Departure Logic
+            if (isToCentral) isLast = (timeStr === '06:00');
+            else if (isToPI) isLast = (timeStr === '06:35');
+
+            // Overnight Badges
+            const overnightToCentral = ['23:50', '01:05', '02:20', '03:30', '04:45', '06:00'];
+            const overnightToPI = ['00:30', '01:40', '02:55', '04:05', '05:20', '06:35'];
+
+            if (isToCentral && overnightToCentral.includes(timeStr)) {
+                specialBadge = { text: t.overnightWanChai, className: "text-purple-600 bg-purple-100 border border-purple-200" };
+            } else if (isToPI && overnightToPI.includes(timeStr)) {
+                specialBadge = { text: t.overnightWanChai, className: "text-purple-600 bg-purple-100 border border-purple-200" };
+            }
+        }
+
+        let showLast = isLast;
+        // NR334 HZMB Logic (Specific handling to preserve existing behavior)
+        if (selectedRoute.id === 'NR334') {
+             const minute = timeStr.split(':')[1];
+             const isToAirport = directionIndex === 0;
+             const isToPI = directionIndex === 1;
+             
+             // Check for 00:00 (To Airport) or 00:30 (To PI) special "Last" logic
+             const isSpecialLastHzmb = (isToAirport && timeStr === '00:00') || (isToPI && timeStr === '00:30');
+             const isHzmbTime = (isToAirport && minute === '00') || (isToPI && minute === '30');
+             
+             // Reset showLast to strictly follow isLastItem for NR334 as per original logic structure
+             showLast = isLastItem; 
+
+             if (showLast) {
+                 badges.push({ text: t.lastDeparture, className: "text-red-600 bg-red-100 border border-red-200" });
+                 // If it is the special last HZMB bus, show HZMB badge too
+                 if (isSpecialLastHzmb) {
+                     badges.push({ text: t.viaHZMB, className: "text-orange-600 bg-orange-100" });
+                 }
+             } else {
+                 if (isHzmbTime) {
+                     badges.push({ text: t.viaHZMB, className: "text-orange-600 bg-orange-100" });
+                 } else if ((isToAirport && minute === '30') || (isToPI && minute === '00')) {
+                     badges.push({ text: t.normal, className: "text-slate-500 bg-slate-100" });
+                 } else {
+                     badges.push({ text: t.onSchedule, className: "text-slate-500 bg-slate-100" });
+                 }
+             }
+        } else {
+            // General Logic for other routes
+            if (showLast) {
+                badges.push({ text: t.lastDeparture, className: "text-red-600 bg-red-100 border border-red-200" });
+            }
+            
+            if (specialBadge) {
+                badges.push(specialBadge);
+            } else if (!showLast) {
+                badges.push({ text: t.onSchedule, className: "text-slate-500 bg-slate-100" });
+            }
+        }
+        return badges;
+    };
+
+    // List Logic
+    let upcoming: ScheduleItem[] = [];
+    let isFullList = false;
+
+    if (selectedRoute.id === 'Ferry-Tsuen-Wan') {
+        // Always Full Schedule for TW Ferry
+        upcoming = departures.map((tStr, idx) => ({ 
+            time: tStr, 
+            timestamp: parseTimeToSeconds(tStr), 
+            badges: getBadges(tStr, idx === departures.length - 1)
+        }));
+        isFullList = true;
+    } else if (canExtend) {
+        // Generate schedule for Today (Day 0), Tomorrow (Day 1), Day After (Day 2) to cover 48h
+        let allCandidates: ScheduleItem[] = [];
+        
+        for (let i = 0; i <= 2; i++) {
+            const { times, dateLabel } = getServiceDayDepartures(i);
+            const daySecondsOffset = i * 24 * 3600;
+            const dayItems = times.map((tStr, idx) => {
+                return {
+                    time: tStr,
+                    timestamp: parseTimeToSeconds(tStr) + daySecondsOffset,
+                    badges: getBadges(tStr, idx === times.length - 1),
+                    dateLabel
+                };
+            });
+            allCandidates = [...allCandidates, ...dayItems];
+        }
+
+        if (GROUP_A.includes(selectedRoute.id)) {
+             // Group A: Compact = Today's Remaining (No limit). Extended = 48h.
+             
+             if (isExtendedView) {
+                 // Extended: Show 48h
+                 const windowEnd = currentTimeSeconds + (48 * 3600);
+                 upcoming = allCandidates.filter(item => item.timestamp > filterThreshold && item.timestamp <= windowEnd);
+             } else {
+                 // Compact: Today's remaining items (full set)
+                 const day0Data = getServiceDayDepartures(0);
+                 const day0Items = day0Data.times.map((tStr, idx) => ({
+                      time: tStr,
+                      timestamp: parseTimeToSeconds(tStr),
+                      badges: getBadges(tStr, idx === day0Data.times.length - 1),
+                      dateLabel: day0Data.dateLabel
+                 })).filter(item => item.timestamp > filterThreshold);
+
+                 if (day0Items.length > 0) {
+                     upcoming = day0Items;
+                 } else {
+                     // If today is finished, show full tomorrow
+                     const day1Data = getServiceDayDepartures(1);
+                     upcoming = day1Data.times.map((tStr, idx) => ({
+                          time: tStr,
+                          timestamp: parseTimeToSeconds(tStr) + 86400,
+                          badges: getBadges(tStr, idx === day1Data.times.length - 1),
+                          dateLabel: day1Data.dateLabel
+                     })).filter(item => item.timestamp > filterThreshold);
+                 }
+             }
+        } else if (GROUP_B.includes(selectedRoute.id)) {
+             // Group B: Compact = 24h. Extended = 48h.
+             const hours = isExtendedView ? 48 : 24;
+             const windowEnd = currentTimeSeconds + (hours * 3600);
+             upcoming = allCandidates.filter(item => item.timestamp > filterThreshold && item.timestamp <= windowEnd);
+        }
+        
+        isFullList = false;
+    } else {
+        upcoming = [];
+    }
+    
+    // Add badges to countdown if available
+    let countdownBadges: Badge[] = [];
+    if (countdown.isAvailable && countdown.departureTime !== '--:--') {
+        let isLastForCountdown = false;
+        if (nextTime) {
+             isLastForCountdown = (nextTime === departures[departures.length - 1]);
+        } else {
+             const nextDayData = getServiceDayDepartures(1);
+             const nextDayDeps = nextDayData.times;
+             if (nextDayDeps.length > 0 && countdown.departureTime === nextDayDeps[0]) {
+                 // First of next day is definitely not last (unless it is the ONLY one)
+                 isLastForCountdown = (nextDayDeps.length === 1);
+             }
+        }
+        countdownBadges = getBadges(countdown.departureTime, isLastForCountdown);
+    }
+
+    let collapseLabel = t.show12h; // "Show today's..."
+    let expandLabel = t.show48h; // "Show 48h"
+
+    if (GROUP_B.includes(selectedRoute.id)) {
+        collapseLabel = t.show24h;
+        // expandLabel is already show48h
     }
 
     return { 
-      currentCountdown: countdown, 
+      currentCountdown: { ...countdown, badges: countdownBadges }, 
       nextDepartures: upcoming,
-      showFullSchedule: isFullList
+      showFullSchedule: isFullList,
+      collapseLabel,
+      expandLabel
     };
-  }, [now, selectedRoute, directionIndex, effectiveDayType, scheduleOverride]);
+  }, [now, selectedRoute, directionIndex, effectiveDayType, scheduleOverride, isExtendedView, canExtend, lang]);
 
   const crossRouteData = useMemo(() => {
       const t = translations[lang];
@@ -868,18 +1035,22 @@ export default function App() {
 
         <HeroCountdown 
           {...currentCountdown}
+          badges={currentCountdown.badges || []}
           lang={lang}
-          routeId={selectedRoute.id}
-          directionIndex={directionIndex}
         />
 
         <UpcomingSchedule 
-          times={nextDepartures} 
+          items={nextDepartures} 
           lang={lang}
           isFullList={showFullSchedule}
           crossRoute={crossRouteData}
           routeId={selectedRoute.id}
           directionIndex={directionIndex}
+          canExtend={canExtend}
+          isExtendedView={isExtendedView}
+          onToggleView={() => setIsExtendedView(!isExtendedView)}
+          collapseLabel={collapseLabel}
+          expandLabel={expandLabel}
         />
       </main>
 
