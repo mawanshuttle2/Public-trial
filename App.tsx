@@ -45,7 +45,7 @@ const translations = {
     normal: 'Normal',
   },
   zh: {
-    nextArrival: '下一班',
+    nextArrival: '開出時間剩餘',
     laterDepartures: '稍後班次',
     onSchedule: '預定班次',
     bus: '巴士',
