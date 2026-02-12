@@ -51,7 +51,7 @@ const translations = {
     bus: '巴士',
     ferry: '渡輪',
     settings: '設定',
-    noMoreService: '今日服務已結束',
+    noMoreService: '今日服務已經結束',
     serviceEnded: '今日班次已全部開出',
     scheduledAt: '表定開出',
     language: '語言',
