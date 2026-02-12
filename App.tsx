@@ -138,15 +138,15 @@ const CurrentTimeBar: React.FC<{ now: Date; lang: Language; displayType: DayType
   const typeLabel = t[displayType];
 
   return (
-    <div className="bg-indigo-950 text-white pt-12 pb-6 px-6 flex flex-col items-center justify-center border-b border-indigo-800/30 shadow-2xl">
-      <div className="flex items-center space-x-2 text-indigo-300 font-bold tracking-widest text-[10px] uppercase mb-1">
+    <div className="bg-indigo-950 text-white pt-8 pb-2 px-4 flex flex-col items-center justify-center border-b border-indigo-800/30 shadow-xl">
+      <div className="flex items-center space-x-2 text-indigo-300 font-bold tracking-widest text-[10px] uppercase mb-0.5">
         <span>{dateStr}</span>
         <span className="w-1 h-1 bg-indigo-500 rounded-full"></span>
         <span>{dayStr}</span>
         <span className="w-1 h-1 bg-indigo-500 rounded-full"></span>
         <span className="text-white bg-indigo-600 px-2 py-0.5 rounded-full">{typeLabel}</span>
       </div>
-      <div className="mono text-4xl font-black text-white tracking-tighter tabular-nums drop-shadow-md">
+      <div className="mono text-3xl font-black text-white tracking-tighter tabular-nums drop-shadow-md">
         {timeStr}
       </div>
     </div>
@@ -184,8 +184,8 @@ const Header: React.FC<{
   }, [selectedRoute.id]);
 
   return (
-    <div className="bg-white pb-4 shadow-sm sticky top-0 z-30 border-b border-gray-100">
-      <div className="flex items-center py-4 space-x-2">
+    <div className="bg-white pb-1 shadow-sm sticky top-0 z-30 border-b border-gray-100">
+      <div className="flex items-center py-2 space-x-2">
         <div className="relative flex-1 overflow-hidden px-4">
           <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
           <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
@@ -204,7 +204,7 @@ const Header: React.FC<{
                   key={route.id}
                   data-active={isSelected}
                   onClick={() => onSelectRoute(route)}
-                  className={`pl-5 pr-4 py-3 rounded-2xl text-xs font-black transition-all duration-300 flex-shrink-0 whitespace-nowrap flex items-center gap-3 ${
+                  className={`pl-4 pr-3 py-1.5 rounded-2xl text-xs font-black transition-all duration-300 flex-shrink-0 whitespace-nowrap flex items-center gap-3 ${
                     isSelected
                       ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100 scale-105'
                       : 'bg-slate-50 text-slate-500 hover:bg-slate-100 active:scale-95'
@@ -236,7 +236,7 @@ const Header: React.FC<{
         
         <button 
           onClick={onToggleOverride}
-          className="flex-shrink-0 flex items-center space-x-2 mr-4 px-3 py-3 bg-slate-900 rounded-2xl text-[10px] font-bold text-white active:scale-90 transition-all shadow-lg shadow-slate-200"
+          className="flex-shrink-0 flex items-center space-x-2 mr-4 px-3 py-1.5 bg-slate-900 rounded-2xl text-[10px] font-bold text-white active:scale-90 transition-all shadow-lg shadow-slate-200"
         >
           {getIcon()}
           <span className="hidden xs:inline">{t[scheduleOverride]}</span>
@@ -253,19 +253,19 @@ const SegmentedControl: React.FC<{
   lang: Language;
 }> = ({ directions, selectedIndex, onSelect, lang }) => {
   return (
-    <div className="mx-4 mt-6 bg-slate-100 p-1.5 rounded-2xl flex relative border border-slate-200/50">
+    <div className="mx-4 mt-2 bg-slate-100 p-1 rounded-2xl flex relative border border-slate-200/50">
       <div 
-        className="absolute top-1.5 bottom-1.5 bg-white rounded-xl shadow-md transition-all duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+        className="absolute top-1 bottom-1 bg-white rounded-xl shadow-md transition-all duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
         style={{
-          width: 'calc(50% - 6px)',
-          left: selectedIndex === 0 ? '6px' : 'calc(50%)'
+          width: 'calc(50% - 4px)',
+          left: selectedIndex === 0 ? '4px' : 'calc(50%)'
         }}
       />
       {directions.map((dir, idx) => (
         <button
           key={idx}
           onClick={() => onSelect(idx)}
-          className={`flex-1 py-3 text-xs font-extrabold z-10 transition-colors duration-300 ${
+          className={`flex-1 py-2 text-xs font-extrabold z-10 transition-colors duration-300 ${
             selectedIndex === idx ? 'text-indigo-700' : 'text-slate-400'
           }`}
         >
@@ -301,13 +301,13 @@ const HeroCountdown: React.FC<{
   const formattedSeconds = seconds.toString().padStart(2, '0');
 
   return (
-    <div className={`mx-4 mt-6 rounded-[32px] p-8 shadow-2xl shadow-indigo-100/50 border transition-colors duration-500 relative overflow-hidden ${getBgClass()}`}>
+    <div className={`mx-4 mt-2 rounded-[24px] p-5 shadow-2xl shadow-indigo-100/50 border transition-colors duration-500 relative overflow-hidden ${getBgClass()}`}>
       <div className="absolute top-0 right-0 p-4 opacity-[0.03] pointer-events-none">
-        <Clock size={160} strokeWidth={1} />
+        <Clock size={120} strokeWidth={1} />
       </div>
       
       <div className="relative">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-2">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{t.nextArrival}</span>
           <div className="flex items-center gap-2">
              {badges.map((badge, idx) => (
@@ -315,41 +315,41 @@ const HeroCountdown: React.FC<{
                  {badge.text}
                </div>
              ))}
-             <div className="px-4 py-1.5 bg-indigo-50 text-indigo-700 rounded-full font-black text-xs border border-indigo-100/50">
+             <div className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full font-black text-[10px] border border-indigo-100/50">
                 {departureTime}
              </div>
           </div>
         </div>
 
-        <div className={`mono text-8xl font-black flex items-baseline leading-none tracking-tighter ${getColorClass()}`}>
+        <div className={`mono text-6xl font-black flex items-baseline leading-none tracking-tighter ${getColorClass()}`}>
           {isAvailable ? (
             minutes >= 60 ? (
               <>
                 {Math.floor(minutes / 60)}
-                <span className="text-4xl mx-1 opacity-50">:</span>
-                <span className="text-5xl opacity-80">{(minutes % 60).toString().padStart(2, '0')}</span>
-                <span className="text-lg font-black ml-3 text-slate-300 tracking-normal">{t.hr}</span>
+                <span className="text-2xl mx-1 opacity-50">:</span>
+                <span className="text-4xl opacity-80">{(minutes % 60).toString().padStart(2, '0')}</span>
+                <span className="text-sm font-black ml-3 text-slate-300 tracking-normal">{t.hr}</span>
               </>
             ) : minutes >= 1 ? (
               <>
                 {minutes}
-                <span className="text-4xl mx-1 opacity-50">:</span>
-                <span className="text-5xl opacity-80">{formattedSeconds}</span>
-                <span className="text-lg font-black ml-3 text-slate-300 tracking-normal">{t.min}</span>
+                <span className="text-2xl mx-1 opacity-50">:</span>
+                <span className="text-4xl opacity-80">{formattedSeconds}</span>
+                <span className="text-sm font-black ml-3 text-slate-300 tracking-normal">{t.min}</span>
               </>
             ) : (
               <>
                 {seconds}
-                <span className="text-lg font-black ml-3 text-slate-300 tracking-normal">{t.sec}</span>
+                <span className="text-sm font-black ml-3 text-slate-300 tracking-normal">{t.sec}</span>
               </>
             )
           ) : (
-            <span className="text-2xl uppercase leading-tight tracking-tight">{t.noMoreService}</span>
+            <span className="text-xl uppercase leading-tight tracking-tight">{t.noMoreService}</span>
           )}
         </div>
         
-        <p className="mt-6 text-sm text-slate-500 font-bold flex items-center">
-          <Clock size={14} className="mr-2 opacity-30" />
+        <p className="mt-3 text-xs text-slate-500 font-bold flex items-center">
+          <Clock size={12} className="mr-2 opacity-30" />
           {isAvailable ? `${t.scheduledAt} ${departureTime}` : t.serviceEnded}
         </p>
       </div>
@@ -380,8 +380,8 @@ const UpcomingSchedule: React.FC<{
   if (items.length === 0) return null;
   
   return (
-    <div className="mx-4 mt-10 mb-32">
-      <div className="flex items-center justify-between mb-5 px-4">
+    <div className="mx-4 mt-4 mb-32">
+      <div className="flex items-center justify-between mb-3 px-2">
         <div className="flex items-center gap-3">
           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
             {isFullList ? t.fullSchedule : t.laterDepartures}
@@ -415,7 +415,7 @@ const UpcomingSchedule: React.FC<{
           </button>
         )}
       </div>
-      <div className="bg-white rounded-[32px] overflow-hidden shadow-xl shadow-slate-200/50 border border-slate-100">
+      <div className="bg-white rounded-[24px] overflow-hidden shadow-xl shadow-slate-200/50 border border-slate-100">
         {items.map((item, idx) => {
           const showDateHeader = idx === 0 || item.dateLabel !== items[idx - 1].dateLabel;
 
@@ -427,15 +427,15 @@ const UpcomingSchedule: React.FC<{
                 </div>
               )}
               <div 
-                className={`flex items-center justify-between p-6 active:bg-slate-50 transition-colors ${
+                className={`flex items-center justify-between p-4 active:bg-slate-50 transition-colors ${
                   idx !== items.length - 1 ? 'border-b border-slate-50' : ''
                 }`}
               >
                 <div className="flex items-center">
-                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center mr-5 shadow-sm bg-slate-50 text-indigo-600`}>
-                    <Clock size={20} strokeWidth={2.5} />
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center mr-4 shadow-sm bg-slate-50 text-indigo-600`}>
+                    <Clock size={16} strokeWidth={2.5} />
                   </div>
-                  <span className={`mono text-2xl font-black tracking-tighter tabular-nums text-slate-800`}>{item.time}</span>
+                  <span className={`mono text-xl font-black tracking-tighter tabular-nums text-slate-800`}>{item.time}</span>
                 </div>
                 <div className="flex flex-col items-end gap-1">
                     {item.badges.map((badge, bIdx) => (
@@ -727,10 +727,10 @@ export default function App() {
              });
              const dateLabel = formatter.format(targetDate);
 
-             return { times: direction.departures[type] || [], dateLabel };
+             return { times: direction.departures[type] || [], dateLabel, targetDate, formatter };
         }
         // Manual override: just repeat the same schedule
-        return { times: departures, dateLabel: `Day +${dayOffset}` }; 
+        return { times: departures, dateLabel: `Day +${dayOffset}`, targetDate: null, formatter: null }; 
     };
 
     // Countdown Calculation
@@ -880,14 +880,26 @@ export default function App() {
         let allCandidates: ScheduleItem[] = [];
         
         for (let i = 0; i <= 2; i++) {
-            const { times, dateLabel } = getServiceDayDepartures(i);
+            const { times, dateLabel, targetDate, formatter } = getServiceDayDepartures(i);
             const daySecondsOffset = i * 24 * 3600;
             const dayItems = times.map((tStr, idx) => {
+                let itemDateLabel = dateLabel;
+                // Adjust label for late night departures (00:00 - 05:59) if in Auto mode to follow calendar day
+                if (scheduleOverride === 'auto' && targetDate && formatter) {
+                    const seconds = parseTimeToSeconds(tStr);
+                    // Check if time is 00:00 or later (which corresponds to >= 24h in our logic)
+                    if (seconds >= 24 * 3600) {
+                        const nextDay = new Date(targetDate);
+                        nextDay.setDate(nextDay.getDate() + 1);
+                        itemDateLabel = formatter.format(nextDay);
+                    }
+                }
+
                 return {
                     time: tStr,
                     timestamp: parseTimeToSeconds(tStr) + daySecondsOffset,
                     badges: getBadges(tStr, idx === times.length - 1),
-                    dateLabel
+                    dateLabel: itemDateLabel
                 };
             });
             allCandidates = [...allCandidates, ...dayItems];
