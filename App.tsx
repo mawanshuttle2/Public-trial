@@ -64,7 +64,7 @@ const translations = {
     auto: '自動',
     weekday: '平日',
     saturday: '星期六',
-    sunday: '假日/星期日',
+    sunday: '紅日/星期日',
     forceMode: '模式: ',
     fullSchedule: '全日班次',
     switchFerryToCentral: '渡輪 (往中環)',
