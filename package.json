@@ -1,5 +1,8 @@
 {
   "name": "copy-of-mawanbusv2.5",
+  "homepage": "https://mawanshuttle2.github.io/Public-trial/", 
+  ...
+}
   "private": true,
   "version": "0.0.0",
   "type": "module",
